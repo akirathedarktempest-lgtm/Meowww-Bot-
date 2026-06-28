@@ -14,20 +14,22 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS ids(
 intents=discord.Intents.all()
 bot=commands.Bot("$",intents=intents)
 
-def GuildData():
-    cursor.execute("SELECT guild_id FROM ids")
+def IDS():
+    cursor.execute("SELECT * FROM ids")
     info=cursor.fetchall()
-    l=[]
+    d={}
     for i in info:
-        l.append(i[0])
-    return l
-def ChannelData():
-    cursor.execute("SELECT channel_id FROM ids")
-    info=cursor.fetchall()
-    l=[]
-    for i in info:
-        l.append(i[0])
-    return l
+        channel=i[1]
+        guild=i[0]
+        l=[]
+        channel=channel.split("-")
+        for z in channel:
+            if z=="":
+                pass
+            else:
+                l.append(int(z))
+        d[guild]=l
+    return d
 
 @bot.event
 async def on_ready():
@@ -74,26 +76,23 @@ async def choose(interaction:discord.Interaction,channel:str):
     
 @bot.event
 async def on_message(message:discord.Message):
-    guild=GuildData()
-    channel=ChannelData()
+    dictionary=IDS()
     if message.author==bot.user:
         return
-    if message.guild.id in guild:
-        number=guild.index(message.guild.id)
-        channel_ids=channel[number]
-        channel_ids=channel_ids.split("-")
-        for i in channel_ids:
-            if message.channel.id==int(i):
-                channels=message.guild.get_channel(int(i))
-                await channels.send(random.choice(["meow","meowww","meow ;3","meow :3"]))
-                break
+    if message.guild.id in dictionary:
+        channels=dictionary[message.guild.id]
+        try:
+            channel=channels.index(message.channel.id)
+            if channel is None:
+                print("line 101")
             else:
-                pass
+                channel=message.guild.get_channel(channels[channel])
+                await channel.send(f"{random.choice(["meow","meow :3","meow ;3"])}")
+        except ValueError as e:
+            print(f"{e} but it's fine!")
     await bot.process_commands(message)
 
 bot.run("TOKEN")
 
 #rebuilding everything from scratch, but it wouldn't take much time
-#added two functions which will take care of making lists of guild id and channel id
-#you may think, then it can be a problem at indexing? well, most probably it shouldn't, because the indexing of GuildData and ChannelData will be same, it depends on database
-#and the guild id wouldn't have empty channels, because the guild id is only added when you are also adding its channel id, if the guild id already exist in db, channel id will be added, if not then it will be created
+#added one function only replacing two
